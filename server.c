@@ -32,7 +32,7 @@ typedef struct param {
 void tryWrite(char *);
 void exitChat();
 void readPort();
-int divide(char*, char[][LIMIT], const char*);
+int divide(char*, char[][LIMIT], const char *);
 char getPhase(char*);
 void errorOut(char*);
 void parse(char *);
@@ -47,6 +47,7 @@ int phase = 0; // -1: Unknown, 0: CSP, 1: MP, 2: CTP
 CPhase *csp;
 int seq = 1; // probe sequence number starting at 1
 char *data;
+int len = 0;
 
 // closes socket and exits
 void closeCt(){
@@ -70,8 +71,9 @@ void errorOut(char *msg){
 
 // reads in data from the socket
 void readPort(){
+	len = LIMIT;
 	char buffer[LIMIT];
-	data = malloc(LIMIT);
+	data = malloc(len);
 	bool av = false;
 
 	while (cfd != -1){
@@ -79,7 +81,10 @@ void readPort(){
 
 		if (size == 0) exitChat();
 
-		else if (size < 0 && av) { parse(data); av = false; }
+		else if (size < 0 && av) {
+			parse(data); 
+			av = false; 
+		}
 
 		else if (size > 0){ strncat(data, buffer, size); av = true; }			
 		
@@ -112,7 +117,6 @@ bool validCSP(char msg[][LIMIT], int size){
 
 // check if mp message is valid
 bool validMP(char msg[][LIMIT], int size){
-
 	if (msg == NULL) return false;
 
 	if (size != 3) return false;
@@ -162,7 +166,8 @@ void parse(char *msg){
 			csp->size = atoi(argv[3]);
 			csp->delay = atoi(argv[4]);
 			csp->mtype = argv[1];
-			data = malloc(OVERHEAD + csp->size);
+			len = OVERHEAD + csp->size;
+			data = malloc(len);
 
 		}else errorOut("404 ERROR: Invalid Connection Setup Message\n");
 	}
@@ -197,21 +202,43 @@ void parse(char *msg){
 // divides a string into an array of substrings by a delimiter
 int divide(char *source, char dest[][LIMIT], const char *delim){
         // Copy original string before tokenization
-        char *original = malloc(strlen(source)+1);
+        /*char *original = malloc(strlen(source)+1);
         strcpy(original, source);
+	int len = strlen(source);
 
-
+	printf("Source: %s\n", source);
         char *chunk = strtok(source, delim);
         int count = 0;
-
+	
+	printf("First: %s\n", chunk);
         while (chunk != NULL){
+		printf("%s\n", chunk);
                 strcpy(dest[count++], chunk);
                 chunk = strtok(NULL, delim);
         }
 
-        strcpy(source, original);
+	source = original;*/
 
-        return count;
+	int count = 0;
+
+	int a = 0;
+	int b = 0;
+	int c = 0;
+	int i = 0;
+	int size = strlen(source);
+	char *d = (char *)  delim;
+
+	while(b < size){
+		while (source[b] != d[0] && source[b] != '\n'){
+		       dest[c][i++] = source[b++];
+		}
+
+		dest[c][b++] = '\0';
+		i = 0;
+		c++;
+	}
+
+        return c;
 }
 	
 

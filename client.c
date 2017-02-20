@@ -93,7 +93,7 @@ int main(int argc, char *argv[]){
 
 		// we have read some data
 	    	else if(n>0){
-        		printf("%s", buffer);
+        		//printf("%s", buffer);
 
             		bzero(buffer, strlen(buffer));
 			av = true;
