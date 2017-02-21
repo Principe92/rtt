@@ -32,15 +32,16 @@ typedef struct param {
 void tryWrite(char *);
 void exitChat();
 void readPort();
-int divide(char*, char[][LIMIT], const char *);
+int divide(char*, char[][LIMIT], const char *, int);
 char getPhase(char*);
 void errorOut(char*);
-void parse(char *);
+void parse(char *, int);
 bool validCSP(char [][LIMIT], int);
 bool validMP(char [][LIMIT], int);
 bool validCTP(char [][LIMIT], int);
 bool areEqual(char *, char *);
 void closeCt();
+bool sizeIsRight(char *, int); 
 
 int cfd = -1;
 int phase = 0; // -1: Unknown, 0: CSP, 1: MP, 2: CTP
@@ -53,7 +54,14 @@ int len = 0;
 void closeCt(){
 	shutdown(cfd, SHUT_RDWR);
 	close(cfd);
+	phase = 0;
+        free(csp);
+        seq = 1;
 	cfd = -1;
+}
+
+bool sizeIsRight(char *msg, int size){
+	return strlen(msg) != size;
 }
 
 // closes the connection upon detecting that the client has disconnected
@@ -66,7 +74,7 @@ void exitChat(){
 void errorOut(char *msg){
 	write(cfd, msg, strlen(msg)+1);
 	printf("Closing client connection....\n");
-	closeCt(cfd);
+	closeCt();
 }
 
 // reads in data from the socket
@@ -75,6 +83,7 @@ void readPort(){
 	char buffer[LIMIT];
 	data = malloc(len);
 	bool av = false;
+	int hold = 0;
 
 	while (cfd != -1){
 		int size = recv(cfd, buffer, LIMIT, 0);
@@ -82,14 +91,21 @@ void readPort(){
 		if (size == 0) exitChat();
 
 		else if (size < 0 && av) {
-			parse(data); 
+			parse(data, hold);
+			hold = 0;
 			av = false; 
 		}
 
-		else if (size > 0){ strncat(data, buffer, size); av = true; }			
+		else if (size > 0){ 
+			strncat(data, buffer, size); 
+			av = true; 
+			hold += size;
+		}			
 		
 		bzero(buffer, LIMIT);
 	}
+
+	bzero(data, len);
 	
 }
 
@@ -123,7 +139,7 @@ bool validMP(char msg[][LIMIT], int size){
 
 	if (msg[0][0] != 'm') return false;
 
-	if (strlen(msg[2])-1 != csp->size) return false;
+	if (sizeIsRight(msg[2], csp->size)) return false;
 
 	if (atoi(msg[1]) != seq) return false;
 
@@ -150,10 +166,10 @@ void tryWrite(char *msg){
 }
 
 // parses the data
-void parse(char *msg){
+void parse(char *msg, int count){
 	char argv[LIMIT][LIMIT];
         const char delim = ' ';
-        int size = divide(msg, argv, &delim);
+        int size = divide(msg, argv, &delim, count);
 
 	// Connection Setup Phase
 	if (phase == 0){
@@ -191,35 +207,14 @@ void parse(char *msg){
 	else if (phase == 2){
 		if (validCTP(argv, size)){
 			tryWrite("200 OK: Closing connection\n");
-			closeCt();
-			phase = 0;
-			free(csp);
-			seq = 1;
+			exitChat();
 		} else errorOut("404 ERROR: Invalid Termination Message\n");
 	}			
 }
 
 // divides a string into an array of substrings by a delimiter
-int divide(char *source, char dest[][LIMIT], const char *delim){
+int divide(char *source, char dest[][LIMIT], const char *delim, int count){
         // Copy original string before tokenization
-        /*char *original = malloc(strlen(source)+1);
-        strcpy(original, source);
-	int len = strlen(source);
-
-	printf("Source: %s\n", source);
-        char *chunk = strtok(source, delim);
-        int count = 0;
-	
-	printf("First: %s\n", chunk);
-        while (chunk != NULL){
-		printf("%s\n", chunk);
-                strcpy(dest[count++], chunk);
-                chunk = strtok(NULL, delim);
-        }
-
-	source = original;*/
-
-	int count = 0;
 
 	int a = 0;
 	int b = 0;
@@ -227,15 +222,20 @@ int divide(char *source, char dest[][LIMIT], const char *delim){
 	int i = 0;
 	int size = strlen(source);
 	char *d = (char *)  delim;
+	bool has = false;
 
-	while(b < size){
-		while (source[b] != d[0] && source[b] != '\n'){
+	while(b < count){
+		while (source[b] != d[0] && source[b] != '\n' && source[b] != '\0'){
 		       dest[c][i++] = source[b++];
+		       has = true;
 		}
 
-		dest[c][b++] = '\0';
-		i = 0;
+		if (source[b] == '\0') break;
+
+		dest[c][i] = '\0';
 		c++;
+		i = 0;
+		b++;
 	}
 
         return c;

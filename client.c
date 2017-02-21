@@ -93,7 +93,7 @@ int main(int argc, char *argv[]){
 
 		// we have read some data
 	    	else if(n>0){
-        		//printf("%s", buffer);
+        		printf("%s", buffer);
 
             		bzero(buffer, strlen(buffer));
 			av = true;
@@ -170,11 +170,11 @@ void calc(char *msg, int probes, int size, float mean[]){
 	float f = sum/(probes/1.0f);
 
 	if (areEqual(msg, "rtt")){
-		printf("$: Roundtrip time is: %.4f s\n", f);
+		printf("$: Roundtrip time is: %f s\n", f);
 	}
 
 	else if (areEqual(msg, "tput")){
-                printf("$: Throughput is: %.4f bps\n", (size/1.0f)/f);
+                printf("$: Throughput is: %f bps\n", (size/1.0f)/f);
 	}
 }
 
